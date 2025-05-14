@@ -5,21 +5,13 @@
 #show: gost.with(
   title-template: custom-title-template.from-module(title),
   performers: (
-    (name: "Фамилия И.О.", position: "Студент М3О-221Б-23"),
+    (name: "Елисеев П.А.", position: "Студент М3О-221Б-23"),
   ),  
   subject: "Закомы Ома и Кирхгофа в цепях постоянного тока",
   manager: (name: "Сулаков А.С.", position: "Преподаватель, доцент кафедры 909"),
   report-number: 1,
   city: "Москва",
 )
-
-#show regex("Ошибка составляет"): set text(weight: "bold")
-
-#set heading(numbering: none)
-
-#show heading: it => {
-  align(center)[#upper(it)]
-}
 
 #show pagebreak: none
 
@@ -30,23 +22,28 @@
 = Элементы и приборы
 Резисторы: $R_3$ = 100 Ом, $R_5$ = 200 Ом, $R_7$ = 500 Ом; источник постоянного напряжения с нерегулируемой ЭДС $Е_1$, источник постоянного напряжения с регулируемой ЭДС $Е_2 = (0 ± 24)$ В; цифровой вольтметр.
 
+рисунок @first-scheme-a
+
+
+рисунок @first-scheme-b
+
 = Экспериментальная часть
 а)
   #figure(
-    image("images/1a.jpg", height: 160pt),
+    image("images/1.png", height: 160pt),
     caption: "Схема 1"
   ) <first-scheme-a>
 
 б)
   #figure(
-    image("images/1b.jpg", height: 160pt),
+    image("images/2.png", height: 160pt),
     caption: "Схема 1"
   ) <first-scheme-b>
 
 
 #figure(
-  image("images/2.jpg"),
-  caption: "Схема 2"
+  image("images/3.png", width: 370pt),
+  caption: "Схема 2",
 ) <second-scheme>
 
 #figure(
