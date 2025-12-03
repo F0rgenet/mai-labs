@@ -1,5 +1,7 @@
 #import "@preview/modern-g7-32:0.1.0": gost, abstract, title-templates, structure-heading
 
+#set page(background: rotate(45deg, text(size: 150pt, fill: black.transparentize(95%))[КОПИЯ]))
+
 #import "@preview/codly:1.3.0": *
 #import "@preview/codly-languages:0.1.1": *
 #show: codly-init.with()
@@ -19,7 +21,7 @@
   department: (number: 311, name: "Прикладные программные средства и математические методы"),
   about: [О лабораторной работе №#str(lab-num)],
   subject: ["МЕТОДЫ РЕШЕНИЯ СИСТЕМЫ ЛИНЕЙНЫХ АЛГЕБРАИЧЕСКИХ УРАВНЕНИЙ"],
-  city: "Москва",
+  city: "Копия",
   text-size: (default: 13pt, small: 10pt)
 )
 

@@ -1,9 +1,10 @@
 #import "@preview/modern-g7-32:0.1.0": gost, abstract, title-templates, structure-heading
-#import "@preview/tablex:0.0.8": tablex, hlinex, vlinex
 #import "@preview/codly:1.3.0": *
 #import "@preview/codly-languages:0.1.1": *
 #show: codly-init.with()
 #show raw: set text(size: 8pt)
+
+#set page(background: rotate(45deg, text(size: 150pt, fill: black.transparentize(95%))[КОПИЯ]))
 
 #let lab-num = 3
 
@@ -29,7 +30,7 @@ $ g(x) = 3 - 0.5x $
 $ h(x) = exp(-0.5x^2) $
 Корень уравнения $f(x)=0$ является абсциссой точки пересечения графиков функций $g(x)$ и $h(x)$. Построим эти графики на выбранном интервале $[5.9, 6.1]$.
 
-#raw(read("graph.py"), lang: "python", block: true)
+#raw(read("scripts/graph.py"), lang: "python", block: true)
 
 ```python
 # Результат выполнения кода
@@ -74,7 +75,7 @@ $ x_1 approx 6 - 3.04598 * 10^(-8) approx 5.9999999695 $
 #pagebreak()
 
 *Программная реализация:*
-#raw(read("simple_iteration.py"), lang: "python", block: true)
+#raw(read("scripts/simple_iteration.py"), lang: "python", block: true)
 ```python
 # Результат выполнения кода
 --- Метод Простой Итерации (МПИ) ---
@@ -116,7 +117,7 @@ $ x_1 approx 6.0 - (1.52299 * 10^(-8)) / (0.4999999086) approx 6.0 - 3.04598023 
 #pagebreak()
 
 *Программная реализация:*
-#raw(read("newton.py"), lang: "python", block: true)
+#raw(read("scripts/newton.py"), lang: "python", block: true)
 ```python
 # Результат выполнения кода
 --- Метод Ньютона ---

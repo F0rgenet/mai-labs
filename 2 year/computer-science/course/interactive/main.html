@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Симулятор Микропрограммного Устройства Управления</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; display: flex; flex-direction: column; align-items: center; }
+        .container { display: flex; gap: 20px; width: 100%; max-width: 1400px; flex-wrap: wrap; justify-content: center;}
+        .panel { background-color: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .panel h3 { margin-top: 0; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .control-unit, .operational-part { flex: 1; min-width: 400px; }
+        .registers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .register { border: 1px solid #ddd; padding: 8px; border-radius: 4px; background-color: #f9f9f9; }
+        .register .name { font-weight: bold; color: #555; display: block; margin-bottom: 5px; font-size: 0.9em;}
+        .register .value { font-family: 'Courier New', Courier, monospace; color: #007bff; word-break: break-all; }
+        .active-signal { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .active-path-source { box-shadow: 0 0 8px 2px gold; }
+        .active-path-dest { box-shadow: 0 0 8px 2px deepskyblue; }
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center; padding: 10px; background-color: #e9ecef; border-radius: 8px;}
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #microprogram-view { margin-top: 10px; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; white-space: pre; background-color: #282c34; color: #abb2bf; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+        .current-micro-op-text { color: #61afef; font-weight: bold; }
+        .current-micro-op-row { background-color: #3a3f4b !important; color: #d19a66 !important;}
+        .info-panel { text-align: center; margin-bottom: 20px; }
+        .alu-display { border: 2px dashed #007bff; padding: 10px; margin-top:10px; text-align:center; }
+        .micro-memory-panel { max-height: 300px; overflow-y: auto; }
+        #microprogram-table th, #microprogram-table td { padding: 5px; text-align: left; border-bottom: 1px solid #ddd; font-size: 0.85em;}
+        #microprogram-table th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h2>Симулятор Микропрограммного Устройства Управления (Вариант 7)</h2>
+    <div class="info-panel">
+        Такт: <span id="clock-cycle">0</span> |
+        Активные сигналы Vi: <span id="active-signals-display">-</span> |
+        P2[0] (Пр.Тр.): <span id="p2_0_flag_display">0</span>
+    </div>
+
+    <div class="controls">
+        <button id="reset-button">Сброс</button>
+        <button id="step-button">Шаг</button>
+        <button id="run-button">Запуск (Авто)</button>
+        <button id="stop-button" disabled>Стоп (Авто)</button>
+        <label for="run-speed">Скорость:</label>
+        <select id="run-speed">
+            <option value="1000">Медленно (1с)</option>
+            <option value="500" selected>Средне (0.5с)</option>
+            <option value="200">Быстро (0.2с)</option>
+            <option value="50">Очень быстро (0.05с)</option>
+        </select>
+    </div>
+
+    <div class="container">
+        <div class="panel control-unit">
+            <h3>Блок Управления (БУУ)</h3>
+            <div class="registers">
+                <div class="register" id="reg-PAMK"><span class="name">РАМК (АМК)</span><span class="value">00000</span></div>
+                <div class="register" id="reg-PMK-V"><span class="name">РМК (Упр. часть Vi)</span><span class="value">-</span></div>
+                <div class="register" id="reg-PMK-ADDR"><span class="name">РМК (Адр. часть)</span><span class="value">-</span></div>
+            </div>
+            <h4>Текущая микрокоманда:</h4>
+            <div id="microprogram-view">Загрузите микропрограмму...</div>
+        </div>
+
+        <div class="panel operational-part">
+            <h3>Операционная Часть (ОЧ)</h3>
+            <div class="registers">
+                <div class="register" id="reg-СчК"><span class="name">СчК</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-РК-КОП"><span class="name">РК (КОП)</span><span class="value">MUL</span></div>
+                <div class="register" id="reg-РК-А1"><span class="name">РК (A1)</span><span class="value">00010000</span></div>
+                <div class="register" id="reg-РК-R2"><span class="name">РК (R2)</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-РАП"><span class="name">РАП</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-РЧП"><span class="name">РЧП</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-РОН-R0"><span class="name">РОН[0]</span><span class="value">00100000</span></div>
+                <div class="register" id="reg-РОН-R1"><span class="name">РОН[1]</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-РАРП"><span class="name">РАРП</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-РЧРП"><span class="name">РЧРП</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-P1"><span class="name">Р1 (Множимое)</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-P2"><span class="name">Р2 (Множитель)</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-Тзн"><span class="name">Тзн (Знак рез.)</span><span class="value">0</span></div>
+                <div class="register" id="reg-СчЦ"><span class="name">СчЦ (Счетчик циклов)</span><span class="value">0000</span></div>
+                <div class="register" id="reg-PA"><span class="name">PA (АЛУ)</span><span class="value">00000000</span></div>
+                <div class="register" id="reg-PB"><span class="name">PB (АЛУ)</span><span class="value">0000000000000000</span></div>
+                <div class="register" id="reg-PC"><span class="name">PC (АЛУ Рез/Сдвиг)</span><span class="value">0000000000000000</span></div>
+                <div class="register" id="reg-P3"><span class="name">P3 (Буфер рез.)</span><span class="value">0000000000000000</span></div>
+                 <div class="register" id="reg-СчА"><span class="name">СчА (Адр. рез.)</span><span class="value">00000000</span></div>
+            </div>
+             <div class="alu-display">
+                АЛУ: <span id="alu-operation-display">-</span>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+         <div class="panel micro-memory-panel">
+            <h3>Память Микрокоманд (ПМК)</h3>
+            <table id="microprogram-table">
+                <thead><tr><th>Адрес МК</th><th>Сигналы Vi</th><th>Базовый след. адрес</th><th>Условие</th><th>Описание</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    const REG_WIDTH = 8;
+    const MICRO_ADDR_WIDTH = 5;
+    const ALU_REG_WIDTH = REG_WIDTH * 2;
+
+    let registers = {};
+    let clockCycle = 0;
+    let p2_0_flag = 0;
+    let autoRunInterval = null;
+    let runSpeed = 500;
+
+    let mainMemory = {};
+    let ronMemory = {};
+
+    const microprogramMemory = {
+        "00000": { signals: ["V1"], nextAddrBase: "00001", description: "РАП := СчК" },
+        "00001": { signals: ["V2"], nextAddrBase: "00010", description: "РЧП := Чт(РАП)" },
+        "00010": { signals: ["V3", "V4"], nextAddrBase: "00011", description: "РК := РЧП, СчК := СчК+1" },
+        "00011": { signals: ["V5", "V9"], nextAddrBase: "00100", description: "РАП := РК(А1), РАРП := РК(R2)" },
+        "00100": { signals: ["V2", "V10"], nextAddrBase: "00101", description: "РЧП := Чт(РАП) [оп1], РЧРП := Чт_РОН(РАРП)" },
+        "00101": { signals: ["V6", "V11"], nextAddrBase: "00110", description: "Р1 := РЧП, РАП := РЧРП" },
+        "00110": { signals: ["V7", "V2"], nextAddrBase: "00111", description: "СчА := РК(А1), РЧП := Чт(РАП) [оп2]" },
+        "00111": { signals: ["V8", "V12"], nextAddrBase: "01000", description: "СчА := СчА+1, Р2 := РЧП" },
+        "01000": { signals: ["V13"], nextAddrBase: "01001", description: "Тзн := Р1[0]⊕Р2[0]" },
+        "01001": { signals: ["V14", "V15"], nextAddrBase: "01010", description: "Р1[0]:=0, Р2[0]:=0" },
+        "01010": { signals: ["V16", "V17"], nextAddrBase: "10100", description: "РB:=0, СчЦ:=n_bits" },
+        "10100": { signals: ["V18"], nextAddrBase: "0110", conditionalBitSource: "P2_0_FLAG", description: "Проверка P2[LSB]" }, // nextAddrBase here is 4 bits
+        "01100": { signals: ["V19"], nextAddrBase: "01110", description: "Если P2[LSB]=0: PA := 0" },
+        "01101": { signals: ["V20"], nextAddrBase: "01110", description: "Если P2[LSB]=1: PA := P1 (без знака)" },
+        "01110": { signals: ["V21"], nextAddrBase: "01111", description: "PC := PB + PA" },
+        "01111": { signals: ["V22", "V23"], nextAddrBase: "10000", description: "Сдвиг (PC,P2)>>1, СчЦ--" },
+        "10000": { signals: ["V24"], nextAddrBase: "10100", conditionalBitSource: "СчЦ_NON_ZERO_FLAG", trueNext: "10100", falseNext: "10001", description: "Проверка СчЦ != 0" },
+        "10001": { signals: ["V25"], nextAddrBase: "10010", description: "P3 := PC (Результат без знака)"},
+        "10010": { signals: ["V26", "V27"], nextAddrBase: "10011", description: "PC := P3, PC[MSB]:=Тзн"},
+        "10011": { signals: ["V28"], nextAddrBase: "10110", description: "Конец умножения (логически)"},
+        "10110": { signals: ["V29", "V30"], nextAddrBase: "10111", description: "РЧП:=PC (младшая часть), РАП:=РК(А1)" },
+        "10111": { signals: ["V31"], nextAddrBase: "11000", description: "Зп(РАП):=РЧП (в адрес оп1)" },
+        "11000": { signals: ["V32", "V33"], nextAddrBase: "11001", description: "РЧП:=P3 (полный рез.), РАП:=СчА" },
+        "11001": { signals: ["V31"], nextAddrBase: "00000", description: "Зп(РАП):=РЧП (в адрес СчА), Конец." }
+    };
+
+    const domElements = {
+        clockCycle: document.getElementById('clock-cycle'),
+        activeSignalsDisplay: document.getElementById('active-signals-display'),
+        p2_0_flag_display: document.getElementById('p2_0_flag_display'),
+        microprogramView: document.getElementById('microprogram-view'),
+        aluOperationDisplay: document.getElementById('alu-operation-display'),
+        PAMK: document.getElementById('reg-PAMK').querySelector('.value'),
+        PMK_V: document.getElementById('reg-PMK-V').querySelector('.value'),
+        PMK_ADDR: document.getElementById('reg-PMK-ADDR').querySelector('.value'),
+        СчК: document.getElementById('reg-СчК').querySelector('.value'),
+        РК_КОП: document.getElementById('reg-РК-КОП').querySelector('.value'),
+        РК_А1: document.getElementById('reg-РК-А1').querySelector('.value'),
+        РК_R2: document.getElementById('reg-РК-R2').querySelector('.value'),
+        РАП: document.getElementById('reg-РАП').querySelector('.value'),
+        РЧП: document.getElementById('reg-РЧП').querySelector('.value'),
+        RON_R0: document.getElementById('reg-РОН-R0').querySelector('.value'),
+        RON_R1: document.getElementById('reg-РОН-R1').querySelector('.value'),
+        РАРП: document.getElementById('reg-РАРП').querySelector('.value'),
+        РЧРП: document.getElementById('reg-РЧРП').querySelector('.value'),
+        P1: document.getElementById('reg-P1').querySelector('.value'),
+        P2: document.getElementById('reg-P2').querySelector('.value'),
+        Тзн: document.getElementById('reg-Тзн').querySelector('.value'),
+        СчЦ: document.getElementById('reg-СчЦ').querySelector('.value'),
+        PA: document.getElementById('reg-PA').querySelector('.value'),
+        PB: document.getElementById('reg-PB').querySelector('.value'),
+        PC: document.getElementById('reg-PC').querySelector('.value'),
+        P3: document.getElementById('reg-P3').querySelector('.value'),
+        СчА: document.getElementById('reg-СчА').querySelector('.value'),
+        resetButton: document.getElementById('reset-button'),
+        stepButton: document.getElementById('step-button'),
+        runButton: document.getElementById('run-button'),
+        stopButton: document.getElementById('stop-button'),
+        runSpeedSelect: document.getElementById('run-speed'),
+    };
+
+    function pad(num, width, isMicroAddr = false) {
+        const targetWidth = isMicroAddr ? MICRO_ADDR_WIDTH : width;
+        let str = String(num);
+        return str.length > targetWidth ? str.slice(-targetWidth) : str.padStart(targetWidth, '0');
+    }
+    
+    function binToDec(binStr) { return parseInt(binStr, 2); }
+    function decToBin(decNum, width) { return pad(decNum.toString(2), width); }
+
+    function resetSimulation() {
+        clockCycle = 0;
+        p2_0_flag = 0;
+        if (autoRunInterval) clearInterval(autoRunInterval);
+        domElements.runButton.disabled = false;
+        domElements.stopButton.disabled = true;
+        domElements.stepButton.disabled = false;
+
+        registers = {
+            PAMK: pad("0", MICRO_ADDR_WIDTH, true),
+            PMK_V: "-",
+            PMK_ADDR: "-",
+            СчК: pad("0", REG_WIDTH),
+            РК_КОП: "MUL",
+            РК_А1: pad(16, REG_WIDTH),
+            РК_R2: pad(0, REG_WIDTH), 
+            РАП: pad("0", REG_WIDTH),
+            РЧП: pad("0", REG_WIDTH),
+            RON_R0: pad(32, REG_WIDTH),
+            RON_R1: pad("0", REG_WIDTH),
+            РАРП: pad("0", REG_WIDTH),
+            РЧРП: pad("0", REG_WIDTH),
+            P1: pad("0", REG_WIDTH),
+            P2: pad("0", REG_WIDTH),
+            Тзн: "0",
+            СчЦ: pad("0", 4),
+            PA: pad("0", REG_WIDTH),
+            PB: pad("0", ALU_REG_WIDTH),
+            PC: pad("0", ALU_REG_WIDTH),
+            P3: pad("0", ALU_REG_WIDTH),
+            СчА: pad("0", REG_WIDTH)
+        };
+
+        mainMemory = {};
+        // Instruction: MUL, A1=16 (memory address), R2=0 (RON index)
+        // We'll put the instruction itself at address 0 for simplicity of СчК
+        mainMemory[pad(0, REG_WIDTH)] = pad(16, REG_WIDTH); // Storing A1 directly for V3's simplified loading
+        // Operand 1 (Value: 5) at address 16 (00010000 from РК_А1)
+        mainMemory[pad(16, REG_WIDTH)] = pad(5, REG_WIDTH); 
+        // Operand 2 (Value: 3) at address 32 (00100000 from RON[0])
+        mainMemory[pad(32, REG_WIDTH)] = pad(3, REG_WIDTH); 
+
+        ronMemory = {};
+        // RON[0] (index from РК_R2) stores address of Operand2 (32)
+        ronMemory[pad(0, REG_WIDTH)] = pad(32, REG_WIDTH); 
+
+
+        updateDisplays();
+        populateMicroprogramTable();
+        domElements.activeSignalsDisplay.textContent = "-";
+        domElements.aluOperationDisplay.textContent = "-";
+        document.querySelectorAll('.register').forEach(el => {
+            el.classList.remove('active-signal', 'active-path-source', 'active-path-dest');
+        });
+    }
+
+    function updateDisplays() {
+        domElements.clockCycle.textContent = clockCycle;
+        domElements.p2_0_flag_display.textContent = p2_0_flag;
+
+        for (const key in registers) {
+            if (domElements[key]) {
+                domElements[key].textContent = registers[key];
+            }
+        }
+        
+        const tableRows = document.getElementById('microprogram-table').querySelectorAll('tbody tr');
+        tableRows.forEach(row => {
+            row.classList.remove('current-micro-op-row');
+            if (row.cells[0].textContent === registers.PAMK) {
+                row.classList.add('current-micro-op-row');
+            }
+        });
+    }
+    
+    function populateMicroprogramTable() {
+        const tbody = document.getElementById('microprogram-table').querySelector('tbody');
+        tbody.innerHTML = '';
+        for (const addr in microprogramMemory) {
+            const microOp = microprogramMemory[addr];
+            const row = tbody.insertRow();
+            row.insertCell().textContent = addr;
+            row.insertCell().textContent = microOp.signals.join(', ');
+            row.insertCell().textContent = microOp.nextAddrBase;
+            let conditionText = '-';
+            if (microOp.conditionalBitSource === "P2_0_FLAG") conditionText = "P2[LSB]";
+            if (microOp.conditionalBitSource === "СчЦ_NON_ZERO_FLAG") conditionText = "СчЦ!=0";
+            row.insertCell().textContent = conditionText;
+            row.insertCell().textContent = microOp.description || '-';
+        }
+    }
+
+    function executeSignal(signal) {
+        document.querySelectorAll('.active-path-source, .active-path-dest').forEach(el => {
+            el.classList.remove('active-path-source', 'active-path-dest');
+        });
+
+        const highlight = (regName, type) => {
+            const elId = `reg-${regName.replace('[','-').replace(']','').replace('(','-').replace(')','')}`;
+            const el = document.getElementById(elId);
+            if (el) el.classList.add(type === 'src' ? 'active-path-source' : 'active-path-dest');
+        };
+        
+        let aluOpDesc = "-";
+
+        switch (signal) {
+            case "V1": registers.РАП = registers.СчК; highlight('СчК','src'); highlight('РАП','dest'); break;
+            case "V2": 
+                registers.РЧП = mainMemory[registers.РАП] || pad("0", REG_WIDTH); 
+                highlight('РАП','src'); highlight('РЧП','dest'); 
+                break;
+            case "V3": 
+                registers.РК_КОП = "MUL";
+                // For the first instruction fetch, РЧП holds the content of memory at СчК (address 0)
+                // This content should be interpreted as the instruction itself.
+                // Let's assume the instruction format is such that A1 is directly available or derivable.
+                // For simplicity, if РЧП holds an address (like 16 for A1), we use that.
+                // If РЧП holds something else, we use the default values.
+                if (registers.РЧП === mainMemory[pad(0, REG_WIDTH)]) { // This means РЧП holds the instruction from address 0
+                    registers.РК_А1 = pad(16, REG_WIDTH); // A1 from instruction
+                    registers.РК_R2 = pad(0, REG_WIDTH);  // R2 from instruction
+                } else { // This case should not happen if V2 correctly fetches the instruction.
+                    registers.РК_А1 = pad(16, REG_WIDTH); // Default/Fallback
+                    registers.РК_R2 = pad(0, REG_WIDTH);   // Default/Fallback
+                }
+                highlight('РЧП','src'); highlight('РК-КОП','dest');highlight('РК-А1','dest');highlight('РК-R2','dest'); 
+                break;
+            case "V4": registers.СчК = decToBin(binToDec(registers.СчК) + 1, REG_WIDTH); highlight('СчК','dest'); break;
+            
+            case "V5": registers.РАП = registers.РК_А1; highlight('РК-А1','src'); highlight('РАП','dest'); break;
+            case "V6": registers.P1 = registers.РЧП; highlight('РЧП','src'); highlight('P1','dest'); break;
+            case "V7": registers.СчА = registers.РК_А1; highlight('РК-А1', 'src'); highlight('СчА', 'dest'); break;
+            case "V8": registers.СчА = decToBin(binToDec(registers.СчА) + 1, REG_WIDTH); highlight('СчА','dest'); break;
+
+            case "V9": registers.РАРП = registers.РК_R2; highlight('РК-R2','src'); highlight('РАРП','dest'); break;
+            case "V10": registers.РЧРП = ronMemory[registers.РАРП] || pad("0", REG_WIDTH); highlight('РАРП','src'); highlight('РЧРП','dest'); break;
+            case "V11": registers.РАП = registers.РЧРП; highlight('РЧРП','src'); highlight('РАП','dest'); break;
+            case "V12": registers.P2 = registers.РЧП; highlight('РЧП','src'); highlight('P2','dest'); break;
+
+            case "V13": 
+                registers.Тзн = (parseInt(registers.P1[0]) ^ parseInt(registers.P2[0])).toString();
+                aluOpDesc = `Тзн := P1[0]⊕P2[0] = ${registers.Тзн}`;
+                highlight('P1','src'); highlight('P2','src'); highlight('Тзн','dest');
+                break;
+            case "V14": registers.P1 = "0" + registers.P1.slice(1); highlight('P1','dest'); break;
+            case "V15": registers.P2 = "0" + registers.P2.slice(1); highlight('P2','dest'); break;
+            case "V16": registers.PB = pad("0", ALU_REG_WIDTH); highlight('PB','dest'); break;
+            case "V17": registers.СчЦ = decToBin(REG_WIDTH, 4); highlight('СчЦ','dest'); break;
+
+            case "V18": 
+                p2_0_flag = parseInt(registers.P2[REG_WIDTH - 1]);
+                domElements.p2_0_flag_display.textContent = p2_0_flag;
+                highlight('P2','src');
+                break;
+            case "V19": 
+                registers.PA = pad("0", REG_WIDTH);
+                aluOpDesc = `PA := 0 (P2[LSB]=0)`;
+                highlight('PA','dest');
+                break;
+            case "V20": 
+                registers.PA = registers.P1;
+                aluOpDesc = `PA := P1 (P2[LSB]=1)`;
+                highlight('P1','src'); highlight('PA','dest');
+                break;
+            case "V21":
+                let valPA_v21 = binToDec(registers.PA);
+                let valPB_v21 = binToDec(registers.PB);
+                registers.PC = decToBin(valPB_v21 + valPA_v21, ALU_REG_WIDTH);
+                aluOpDesc = `PC := PB + PA = ${valPB_v21} + ${valPA_v21} = ${binToDec(registers.PC)}`;
+                highlight('PA','src'); highlight('PB','src'); highlight('PC','dest');
+                break;
+            case "V22":
+                let pc_val_v22 = binToDec(registers.PC);
+                let p2_val_v22 = binToDec(registers.P2);
+                registers.PC = decToBin(pc_val_v22 >> 1, ALU_REG_WIDTH);
+                registers.P2 = decToBin(p2_val_v22 >> 1, REG_WIDTH);
+                registers.PB = registers.PC.slice(0, REG_WIDTH);
+                registers.PA = registers.PC.slice(REG_WIDTH);
+                aluOpDesc = `Сдвиг PC, P2 >> 1`;
+                highlight('PC','dest'); highlight('P2','dest'); highlight('PB','dest'); highlight('PA','dest');
+                break;
+            case "V23":
+                registers.СчЦ = decToBin(binToDec(registers.СчЦ) - 1, 4);
+                aluOpDesc = `СчЦ := СчЦ - 1`;
+                highlight('СчЦ','dest');
+                break;
+            case "V24": 
+                aluOpDesc = `Проверка СчЦ != 0`;
+                highlight('СчЦ','src');
+                break;
+            case "V25": registers.P3 = registers.PC; aluOpDesc = `P3 := PC`; highlight('PC','src'); highlight('P3','dest'); break;
+            case "V26": registers.PC = registers.P3; aluOpDesc = `PC := P3`; highlight('P3','src'); highlight('PC','dest'); break;
+            case "V27": 
+                registers.PC = registers.Тзн + registers.PC.slice(1);
+                aluOpDesc = `PC[MSB] := Тзн`;
+                highlight('Тзн','src'); highlight('PC','dest');
+                break;
+            case "V28": aluOpDesc = `Конец умножения`; break;
+            
+            case "V29": registers.РЧП = registers.PC.slice(REG_WIDTH); highlight('PC','src'); highlight('РЧП','dest'); break;
+            case "V30": registers.РАП = registers.РК_А1; highlight('РК-А1','src'); highlight('РАП','dest'); break;
+            case "V31": mainMemory[registers.РАП] = registers.РЧП; highlight('РЧП','src'); highlight('РАП','src'); break;
+            case "V32": registers.РЧП = registers.P3; highlight('P3','src'); highlight('РЧП','dest'); break;
+            case "V33": registers.РАП = registers.СчА; highlight('СчА','src'); highlight('РАП','dest'); break;
+
+            default: console.warn("Unknown signal:", signal);
+        }
+        if (aluOpDesc !== "-") domElements.aluOperationDisplay.textContent = aluOpDesc;
+    }
+
+
+    function stepSimulation() {
+        if (autoRunInterval && clockCycle > 100) {
+             clearInterval(autoRunInterval);
+             autoRunInterval = null;
+             domElements.runButton.disabled = false;
+             domElements.stopButton.disabled = true;
+             domElements.stepButton.disabled = false;
+             alert("Автозапуск остановлен после 100 тактов.");
+             return;
+        }
+
+        clockCycle++;
+        domElements.clockCycle.textContent = clockCycle;
+
+        const currentMicroOpAddr = registers.PAMK;
+        const microOp = microprogramMemory[currentMicroOpAddr];
+
+        if (!microOp) {
+            domElements.microprogramView.innerHTML = `<span style="color:red;">Ошибка: Нет микрокоманды по адресу ${currentMicroOpAddr}</span>`;
+            if (autoRunInterval) clearInterval(autoRunInterval);
+            domElements.runButton.disabled = true;
+            domElements.stepButton.disabled = true;
+            return;
+        }
+        
+        registers.PMK_V = microOp.signals.join(', ');
+        registers.PMK_ADDR = microOp.nextAddrBase;
+        domElements.activeSignalsDisplay.textContent = registers.PMK_V;
+        domElements.microprogramView.innerHTML = `<span class="current-micro-op-text">${currentMicroOpAddr}: ${microOp.description || microOp.signals.join('; ')}</span>`;
+
+        document.querySelectorAll('.active-signal').forEach(el => el.classList.remove('active-signal'));
+        microOp.signals.forEach(s => {
+            executeSignal(s);
+        });
+        
+        let nextPAMK = microOp.nextAddrBase; // Default next address if no condition
+        if (microOp.conditionalBitSource) {
+            let flagValue;
+            if (microOp.conditionalBitSource === "P2_0_FLAG") {
+                flagValue = p2_0_flag; // This flag is set by V18
+                // The nextAddrBase for V18 is 4 bits. The flag is appended to make it 5 bits.
+                if (microOp.nextAddrBase.length === 4) { // Ensure it's the base for P2_0_FLAG
+                     nextPAMK = microOp.nextAddrBase + flagValue.toString();
+                } else {
+                    // This case should ideally not happen if microprogramMemory is defined correctly
+                    console.error("Error: nextAddrBase for P2_0_FLAG condition is not 4 bits long.", microOp);
+                    nextPAMK = microOp.nextAddrBase; // Fallback
+                }
+            } else if (microOp.conditionalBitSource === "СчЦ_NON_ZERO_FLAG") {
+                flagValue = (binToDec(registers.СчЦ) !== 0) ? 1 : 0;
+                nextPAMK = flagValue === 1 ? microOp.trueNext : microOp.falseNext;
+            }
+        }
+        registers.PAMK = pad(nextPAMK, MICRO_ADDR_WIDTH, true);
+
+        updateDisplays();
+    }
+    
+    domElements.runSpeedSelect.addEventListener('change', (event) => {
+        runSpeed = parseInt(event.target.value);
+        if (autoRunInterval) { 
+            clearInterval(autoRunInterval);
+            autoRunInterval = setInterval(stepSimulation, runSpeed);
+        }
+    });
+
+    domElements.resetButton.addEventListener('click', resetSimulation);
+    domElements.stepButton.addEventListener('click', stepSimulation);
+    domElements.runButton.addEventListener('click', () => {
+        if (autoRunInterval) return;
+        autoRunInterval = setInterval(stepSimulation, runSpeed);
+        domElements.runButton.disabled = true;
+        domElements.stopButton.disabled = false;
+        domElements.stepButton.disabled = true;
+    });
+    domElements.stopButton.addEventListener('click', () => {
+        if (autoRunInterval) {
+            clearInterval(autoRunInterval);
+            autoRunInterval = null;
+        }
+        domElements.runButton.disabled = false;
+        domElements.stopButton.disabled = true;
+        domElements.stepButton.disabled = false;
+    });
+
+    resetSimulation();
+</script>
+</body>
+</html>

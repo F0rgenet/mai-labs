@@ -3,7 +3,6 @@
 #import "../utils/title.typ"
 
 #show: gost.with(
-  title-template: custom-title-template.from-module(title),
   performers: (
     (name: "Елисеев П.А.", position: "Студент М3О-221Б-23"),
   ),  
@@ -30,13 +29,13 @@
 = Экспериментальная часть
 а)
   #figure(
-    image("images/1.png", height: 160pt),
+    image("images/1.png", height: 130pt),
     caption: "Схема 1"
   ) <first-scheme-a>
 
 б)
   #figure(
-    image("images/2.png", height: 160pt),
+    image("images/2.png", height: 130pt),
     caption: "Схема 1"
   ) <first-scheme-b>
 
