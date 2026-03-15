@@ -5,6 +5,13 @@
 #import custom-title-template: from-module
 #import "styles.typ": style, info
 
+#set page(background: overlay(image("assets/background.png", width: 100%, height: 120%), rgb("#fff").transparentize(85%)))
+
+#set page(footer: context {
+  let year = int(datetime.today().display("[year]"))
+  white-block[#align(center)[#city #year]]
+})
+
 #show: gost.with(
   title-template: from-module(title-template),
   report-type: [*Лекции по предмету*],

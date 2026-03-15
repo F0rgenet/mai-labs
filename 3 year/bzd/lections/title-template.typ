@@ -69,28 +69,6 @@
   manager: (position: none, name: none),
   city: none,
 ) = {
-  set page(background: overlay(image("assets/background.png", width: 100%, height: 120%), rgb("#fff").transparentize(85%)))
-
-  set page(footer: context {
-    let year = int(datetime.today().display("[year]"))
-    white-block[#align(center)[#city #year]]
-  })
-
-  white-block[
-    #per-line(
-      indent: 0pt,
-      ministry,
-      (
-        value: upper(text(size: 18pt)[#organization.full]),
-        when-present: organization.full,
-      ),
-      (
-        value: [#upper(organization.short)],
-        when-present: organization.short,
-      ),
-    )
-  ]
-
   white-block[#approved-and-agreed-fields(approved-by, agreed-by)]
 
   v(1fr)
@@ -98,7 +76,7 @@
   white-block[
     #per-line(
       align: center,
-      indent: 2fr,
+      indent: 0pt,
       (value: upper(report-type), when-present: report-type),
       (value: upper(about), when-present: about),
       (value: research, when-present: research),
