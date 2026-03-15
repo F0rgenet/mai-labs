@@ -1,4 +1,4 @@
-#import "@preview/modern-g7-32:0.1.0": gost, custom-title-template
+#import "@preview/modern-g7-32:0.2.0": gost, custom-title-template
 #import "@preview/numberingx:0.0.1"
 #import "../utils/title.typ"
 

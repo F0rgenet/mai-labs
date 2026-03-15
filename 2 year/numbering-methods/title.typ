@@ -1,4 +1,4 @@
-#import "@preview/modern-g7-32:0.1.0": gost, title-templates
+#import "@preview/modern-g7-32:0.2.0": gost, title-templates
 
 #set page(paper: "a5")
 

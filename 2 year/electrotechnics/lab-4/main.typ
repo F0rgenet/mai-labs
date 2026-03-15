@@ -1,4 +1,4 @@
-#import "@preview/modern-g7-32:0.1.0": gost, abstract, custom-title-template, title-templates, structure-heading
+#import "@preview/modern-g7-32:0.2.0": gost, abstract, custom-title-template, title-templates, structure-heading
 #import "../utils/title.typ"
 
 #show: gost.with(

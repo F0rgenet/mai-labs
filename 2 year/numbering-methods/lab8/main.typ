@@ -1,4 +1,4 @@
-#import "@preview/modern-g7-32:0.1.0": gost, abstract, title-templates, structure-heading, annexes
+#import "@preview/modern-g7-32:0.2.0": gost, abstract, title-templates, structure-heading, annexes
 #import "@preview/tablex:0.0.8": tablex, hlinex, vlinex, cellx
 #import "@preview/codly:1.3.0": *
 #import "@preview/codly-languages:0.1.1": *

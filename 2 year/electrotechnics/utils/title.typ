@@ -1,4 +1,4 @@
-#import "@preview/modern-g7-32:0.1.0": custom-title-template
+#import "@preview/modern-g7-32:0.2.0": custom-title-template
 #import custom-title-template: *
 
 #let arguments(..args, year: auto) = {
