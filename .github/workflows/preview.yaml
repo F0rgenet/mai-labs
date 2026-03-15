@@ -1,0 +1,46 @@
+name: Generate Previews
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-previews:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: typst-community/setup-typst@v4
+        with:
+          typst-version: 0.14.0
+
+      - name: Generate previews
+        run: |
+          mkdir -p /tmp/previews_out
+          i=1
+          
+          while IFS= read -r f; do
+            if [ "$i" -gt 3 ]; then break; fi
+            if typst compile "$f" "/tmp/previews_out/preview-${i}.png" --root . --format png --pages 1 --ppi 300; then
+              i=$((i+1))
+            fi
+          done < <(find . -type f -name "*.typ" -not -path "*/utils/*" -not -path "*/lections/*" -not -name "styles.typ" -not -name "title*.typ" | shuf)
+
+      - name: Push to previews branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan previews
+          git rm -rf . || true
+          
+          if ls /tmp/previews_out/preview-*.png >/dev/null 2>&1; then
+            cp /tmp/previews_out/preview-*.png .
+            git add preview-*.png
+            git commit -m "Update random lab previews" || true
+            git push origin previews --force
+          else
+            echo "No previews were generated, skipping push."
+          fi
